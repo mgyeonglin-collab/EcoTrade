@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EcoTrade</title>
+<style>
+body {font-family: 'Noto Sans KR', sans-serif; background:#f2f7f3; margin:0; padding:0;}
+header {background:#3b7a57; color:#fff; text-align:center; padding:1rem; font-size:1.5rem;}
+.container {display:flex; height:calc(100vh - 70px);}
+.sidebar {width:300px; background:#fff; border-right:1px solid #cfd8dc; padding:20px; overflow-y:auto; transition:0.3s;}
+.sidebar.hidden {width:0; padding:0; overflow:hidden;}
+.main {flex:1; padding:20px; overflow-y:auto;}
+button, select, input {font-size:14px; border:none; border-radius:4px; padding:8px; margin:4px 0;}
+button {background:#3b7a57; color:white; cursor:pointer;}
+button:hover {background:#2e5e43;}
+.item-card {background:white; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.1); padding:12px; margin-bottom:10px;}
+.item-card img {width:100%; border-radius:4px; height:150px; object-fit:cover;}
+.topbar {display:flex; justify-content:space-between; align-items:center;}
+.toggle-btn {background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;}
+#footerPanel {position:fixed; bottom:0; width:100%; background:#e8f5e9; border-top:1px solid #cfd8dc; display:flex; justify-content:space-around; padding:10px 0;}
+#footerPanel button {background:#3b7a57; color:white; border:none; padding:10px 16px; border-radius:6px; cursor:pointer;}
+#footerPanel button:hover {background:#2e5e43;}
+.modal {display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); justify-content:center; align-items:center;}
+.modal-content {background:white; padding:20px; border-radius:8px; width:90%; max-width:500px; max-height:90vh; overflow:auto;}
+.modal h3 {color:#3b7a57;}
+.shop-item {display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ccc; padding:8px 0;}
+.progress-bar {width:100%; background:#c8e6c9; border-radius:5px; height:20px; margin-top:10px;}
+.progress-fill {background:#3b7a57; height:100%; border-radius:5px; width:0%;}
+#loginPanel {position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:20px; border-radius:8px; box-shadow:0 4px 8px rgba(0,0,0,0.2);}
+</style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+    <span>EcoTrade 친환경 교환 플랫폼</span>
+    <span style="width:30px;"></span>
+  </div>
+</header>
+
+<div id="loginPanel">
+  <h3>로그인 / 회원가입</h3>
+  <input type="email" id="userEmail" placeholder="이메일"><br>
+  <input type="password" id="userPass" placeholder="비밀번호"><br>
+  <button onclick="signup()">회원가입</button>
+  <button onclick="login()">로그인</button>
+  <p id="loginStatus"></p>
+</div>
+
+<div class="container">
+  <div class="sidebar" id="sidebar">
+    <h3>물품 등록</h3>
+    <form id="addForm">
+      <input type="text" id="itemName" placeholder="물품 이름" required><br>
+      <input type="text" id="itemCategory" placeholder="카테고리" required><br>
+      <select id="province" required onchange="loadCities()">
+        <option value="">시/도 선택</option>
+        <option>서울특별시</option>
+        <option>부산광역시</option>
+        <option>대구광역시</option>
+        <option>인천광역시</option>
+        <option>광주광역시</option>
+        <option>대전광역시</option>
+        <option>울산광역시</option>
+        <option>경기도</option>
+        <option>강원도</option>
+        <option>충청북도</option>
+        <option>충청남도</option>
+        <option>전라북도</option>
+        <option>전라남도</option>
+        <option>경상북도</option>
+        <option>경상남도</option>
+        <option>제주특별자치도</option>
+      </select><br>
+      <select id="city" required>
+        <option value="">시/군/구 선택</option>
+      </select><br>
+      <input type="file" id="itemImage" accept="image/*"><br>
+      <button type="submit">등록</button>
+    </form>
+  </div>
+
+  <div class="main">
+    <h2>거래 가능한 물품</h2>
+    <div id="itemList"></div>
+  </div>
+</div>
+
+<div id="footerPanel">
+  <button onclick="openModal('shopModal')">포인트 상점</button>
+  <button onclick="openModal('rankModal')">랭킹</button>
+  <button onclick="openModal('ecoModal')">탄소절감 현황</button>
+  <button onclick="openModal('payModal')">결제/배송</button>
+</div>
+
+<!-- 모달들 (포인트, 랭킹, 탄소, 결제) -->
+<div id="shopModal" class="modal"><div class="modal-content"><h3>포인트 상점</h3><div id="shopList"></div><button onclick="closeModal('shopModal')">닫기</button></div></div>
+<div id="rankModal" class="modal"><div class="modal-content"><h3>거래 랭킹</h3><ol id="rankList"></ol><button onclick="closeModal('rankModal')">닫기</button></div></div>
+<div id="ecoModal" class="modal"><div class="modal-content"><h3>탄소 절감 대시보드</h3><p>지금까지 절약된 탄소 배출량:</p><div class="progress-bar"><div class="progress-fill" id="carbonBar"></div></div><p><span id="carbonAmount">0</span> kg CO₂ 절감</p><button onclick="closeModal('ecoModal')">닫기</button></div></div>
+<div id="payModal" class="modal"><div class="modal-content"><h3>결제 / 배송 시스템</h3><input type="text" placeholder="거래 상품명" id="payItem"><br><input type="number" placeholder="금액(원)" id="payAmount"><br><button onclick="mockPayment()">결제하기</button><p id="paymentStatus" style="color:green;"></p><button onclick="closeModal('payModal')">닫기</button></div></div>
+
+<script type="module">
+  // Firebase SDK import
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
+
+  const firebaseConfig = { apiKey:"YOUR_API_KEY", authDomain:"YOUR_DOMAIN", projectId:"YOUR_PROJECT_ID", storageBucket:"YOUR_BUCKET", messagingSenderId:"YOUR_SENDER_ID", appId:"YOUR_APP_ID" };
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  // 로그인 상태 확인
+  onAuthStateChanged(auth,user=>{
+    if(user){document.getElementById("loginPanel").style.display="none"; loadItemsFirebase();}
+    else{document.getElementById("loginPanel").style.display="block";}
+  });
+
+  window.signup = async function(){ const email=document.getElementById("userEmail").value; const pass=document.getElementById("userPass").value; try{await createUserWithEmailAndPassword(auth,email,pass); alert("회원가입 완료! 로그인하세요.");}catch(e){alert(e.message);} }
+  window.login = async function(){ const email=document.getElementById("userEmail").value; const pass=document.getElementById("userPass").value; try{await signInWithEmailAndPassword(auth,email,pass);}catch(e){alert(e.message);} }
+
+  // 지역
+  const regions={"서울특별시":["강남구","송파구"],"부산광역시":["해운대구","남구"],"경기도":["수원시","성남시"],"경상남도":["창원시","진주시"],"전라남도":["목포시","여수시"]};
+  window.loadCities = function(){const province=document.getElementById("province").value; const citySelect=document.getElementById("city"); citySelect.innerHTML='<option value="">시/군/구 선택</option>'; if(regions[province]){regions[province].forEach(c=>{const opt=document.createElement("option"); opt.textContent=c; citySelect.appendChild(opt);});}}
+
+  window.loadItemsFirebase = async function(){
+    const list=document.getElementById("itemList"); list.innerHTML="";
+    const querySnapshot=await getDocs(collection(db,"items"));
+    querySnapshot.forEach(docSnap=>{
+      const item=docSnap.data();
+      const card=document.createElement("div"); card.className="item-card";
+      card.innerHTML=`<img src="${item.image||''}" alt=""><h4>${item.name}</h4><p>${item.category}</p><p>${item.region}</p><button onclick="tradeItemFirebase('${docSnap.id}')">거래 요청</button>`;
+      list.appendChild(card);
+    });
+  }
+
+  window.tradeItemFirebase = async function(id){alert(`거래 요청 전송: ${id}`);}
+
+  document.getElementById("addForm").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const name=document.getElementById("itemName").value; const category=document.getElementById("itemCategory").value;
+    const province=document.getElementById("province").value; const city=document.getElementById("city").value;
+    const file=document.getElementById("itemImage").files[0];
+    if(!name||!category||!province||!city){alert("모든 항목을 입력해주세요."); return;}
+    let imageData=""; if(file){const reader=new FileReader(); reader.onload=async function(){imageData=reader.result; await addDoc(collection(db,"items"),{name,category,region:`${province} ${city}`,image:imageData}); alert("물품 등록 완료!"); loadItemsFirebase(); e.target.reset();} reader.readAsDataURL(file);}
+    else {await addDoc(collection(db,"items"),{name,category,region:`${province} ${city}`,image:""}); alert("물품 등록 완료!"); loadItemsFirebase(); e.target.reset();}
+  });
+
+  function toggleSidebar(){document.getElementById("sidebar").classList.toggle("hidden");}
+  function openModal(id){document.getElementById(id).style.display='flex';}
+  function closeModal(id){document.getElementById(id).style.display='none';}
+  function mockPayment(){const name=document.getElementById("payItem").value; const amount=document.getElementById("payAmount").value; if(!name||!amount){alert("상품명과 금액을 입력하세요."); return;} document.getElementById("paymentStatus").textContent="결제 완료 (모의)";}
+
+  // 포인트 상점
+  let points=100;
+  const shopItems=[{name:"다회용 텀블러",cost:50},{name:"친환경 장바구니",cost:30},{name:"리필 세제 세트",cost:70},{name:"업사이클 노트북 파우치",cost:120},{name:"에코 스트로 세트",cost:25},{name:"재활용 면 티셔츠",cost:60},{name:"친환경 비누 세트",cost:40},{name:"대나무 칫솔 2개 세트",cost:35},{name:"천연 손 세정제",cost:45},{name:"재생 종이 플래너",cost:55}];
+  window.loadShop=function(){const div=document.getElementById("shopList"); div.innerHTML=`<p>현재 포인트: <b>${points}</b> P</p>`; shopItems.forEach((item,i)=>{const box=document.createElement("div"); box.className="shop-item"; box.innerHTML=`<span>${item.name} (${item.cost}P)</span><button onclick="buyItem(${i})">구매</button>`; div.appendChild(box);});}
+  window.buyItem=function(i){const item=shopItems[i]; if(points>=item.cost){points-=item.cost; alert(`${item.name} 구매 완료!`); loadShop();}else alert("포인트 부족");}
+</script>
+</body>
+</html>
